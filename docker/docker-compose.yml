@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: video_analysis_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-video_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-video_password}
+      POSTGRES_DB: ${POSTGRES_DB:-video_db}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-video_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: video_analysis_app
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-video_user}:${POSTGRES_PASSWORD:-video_password}@postgres:5432/${POSTGRES_DB:-video_db}
+      POSTGRES_USER: ${POSTGRES_USER:-video_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-video_password}
+      POSTGRES_DB: ${POSTGRES_DB:-video_db}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ..:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        sleep 5 &&
+        cd /app/app && alembic -c alembic.ini upgrade head &&
+        cd /app && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: video_analysis_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: video_analysis_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+

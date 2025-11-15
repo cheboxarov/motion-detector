@@ -1,0 +1,161 @@
+{
+	"info": {
+		"_postman_id": "video-analysis-api",
+		"name": "Video Analysis API",
+		"description": "Коллекция для тестирования API анализа видео",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"health"
+					]
+				},
+				"description": "Проверка здоровья приложения и подключения к БД"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Metrics",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/metrics",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"metrics"
+					]
+				},
+				"description": "Получение метрик Prometheus"
+			},
+			"response": []
+		},
+		{
+			"name": "Upload Video for Analysis",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    const jsonData = pm.response.json();",
+							"    pm.collectionVariables.set(\"video_id\", jsonData.video_id);",
+							"    console.log(\"Video ID saved:\", jsonData.video_id);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": [],
+							"description": "Выберите видео файл для анализа"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/analyze",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"analyze"
+					]
+				},
+				"description": "Загрузка видео файла для анализа движения. Автоматически сохраняет video_id в переменную коллекции."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Analysis Result",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/results/{{video_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"results",
+						"{{video_id}}"
+					]
+				},
+				"description": "Получение результата анализа видео по ID. Использует video_id из предыдущего запроса или можно указать вручную."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Analysis Result (Manual ID)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/results/00000000-0000-0000-0000-000000000000",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"results",
+						"00000000-0000-0000-0000-000000000000"
+					]
+				},
+				"description": "Получение результата анализа с указанием ID вручную. Замените UUID на реальный ID видео."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "video_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
